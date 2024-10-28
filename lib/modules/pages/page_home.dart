@@ -9,28 +9,59 @@ class PageHome extends StatefulWidget {
 }
 
 class PageHomeState extends State<PageHome> {
+  //puxa uma nova partida
   final BowlingGame _game = BowlingGame();
+  //numero de pinos que o usr pode derrubar
+  int _remainingPins = 10;
+  //jogadas do frame
+  int _currentRoll = 0;
 
+  //função dos botões de pinos
   void _onPinButtonPressed(int pins) {
     setState(() {
-      _game.roll(pins);
+      _game.roll(pins); //registra o numero de pinos
+
+      _currentRoll++; //jogada no frame
+
+      //ajusta o numero de pinos restante
+      if (_currentRoll == 1 && pins < 10) {
+        _remainingPins = 10 - pins;
+      } else {
+        //se for strike ou a segunda jogada, reseta para o próximo frame
+        _remainingPins = 10;
+        _currentRoll = 0;
+      }
     });
   }
 
+  //reseta os dados do jogo, puxando a função do bowling_game
+  void _resetGame() {
+    setState(() {
+      _game.resetGame();
+      _remainingPins = 10;
+      _currentRoll = 0;
+    });
+  }
+
+  //retorna o unumero de pinos derrubados em cada play
   String displayRoll(int frameIndex, int rollIndex) {
-    // Pega o frame e o valor da jogada
     final frame = _game.frames[frameIndex];
-    if (rollIndex >= frame.rolls.length) return '';
+    if (rollIndex >= frame.rolls.length)
+      return ''; //se não houver jogada restantes
 
     final roll = frame.rolls[rollIndex];
 
-    // Verifica se é um strike, spare ou simplesmente o número de pinos derrubados
-    if (roll == 10 && rollIndex == 0 && frameIndex < BowlingGame.maxFrames - 1) {
-      return 'X'; // Strike nos frames 1-9
+    //strike == X
+    if (roll == 10 &&
+        rollIndex == 0 &&
+        frameIndex < BowlingGame.maxFrames - 1) {
+      return 'X';
     } else if (rollIndex == 1 && frame.isSpare()) {
-      return '/'; // Spare
+      return '/';
+      //spare == /
     } else {
-      return roll.toString(); // Número de pinos derrubados
+      return roll.toString();
+      //retorna o numero de pinos derrubados, se não for spare ou strike
     }
   }
 
@@ -44,31 +75,35 @@ class PageHomeState extends State<PageHome> {
         children: [
           const Center(
             child: Text(
-              'BowlingStats',
+              'BowlingStats', //titulo
               style: TextStyle(fontSize: 24),
             ),
           ),
           const SizedBox(height: 20),
-          // Botões para indicar a quantidade de pinos derrubados
+
+          //gridview dos botões de 0 a 10
           Expanded(
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 10,
+                crossAxisCount: 11, //num colunas
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
               ),
               padding: const EdgeInsets.all(20),
-              itemCount: 10,
+              itemCount: 11,
               itemBuilder: (BuildContext context, int index) {
                 return ElevatedButton(
-                  onPressed: () => _onPinButtonPressed(index + 1),
-                  child: Text('${index + 1}'),
+                  //"desliga" os botões excedentes
+                  onPressed: index <= _remainingPins
+                      ? () => _onPinButtonPressed(index)
+                      : null,
+                  child: Text('$index'),
                 );
               },
             ),
           ),
           const SizedBox(height: 20),
-          // Tabela de pontuação de boliche
+          //tabela dos frames com jogadas e pontuações acumuladas, nas suas colunas
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -76,7 +111,7 @@ class PageHomeState extends State<PageHome> {
                 border: TableBorder.all(),
                 columnWidths: {
                   for (int i = 0; i < BowlingGame.maxFrames; i++)
-                    i: const FixedColumnWidth(100.0),
+                    i: const FixedColumnWidth(100.0), //largura das colunas
                 },
                 children: [
                   TableRow(
@@ -84,7 +119,7 @@ class PageHomeState extends State<PageHome> {
                       for (int i = 1; i <= BowlingGame.maxFrames; i++)
                         Container(
                           padding: const EdgeInsets.all(8),
-                          child: Center(child: Text('$i')),
+                          child: Center(child: Text('$i')), //num frame
                         ),
                     ],
                   ),
@@ -95,6 +130,7 @@ class PageHomeState extends State<PageHome> {
                           children: [
                             Row(
                               children: [
+                                //primeiro e segundo rolamento
                                 Expanded(
                                   child: Container(
                                     padding: const EdgeInsets.all(8),
@@ -103,26 +139,16 @@ class PageHomeState extends State<PageHome> {
                                     ),
                                   ),
                                 ),
-                                if (i < BowlingGame.maxFrames - 1)
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Center(
-                                        child: Text(displayRoll(i, 1)),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  // Para o décimo frame (exibindo até 3 jogadas)
-                                  ...[
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Center(
-                                        child: Text(displayRoll(i, 1)),
-                                      ),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Center(
+                                      child: Text(displayRoll(i, 1)),
                                     ),
                                   ),
+                                ),
+                                //add terceira jogada para o frame 10
+                                if (i == BowlingGame.maxFrames - 1)
                                   Expanded(
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
@@ -131,13 +157,14 @@ class PageHomeState extends State<PageHome> {
                                       ),
                                     ),
                                   ),
-                                ],
                               ],
                             ),
+                            //pontuação de cada frame
                             Container(
                               padding: const EdgeInsets.all(8),
                               child: Center(
-                                child: Text('${_game.frames[i].cumulativeScore}'),
+                                child:
+                                    Text('${_game.frames[i].cumulativeScore}'),
                               ),
                             ),
                           ],
@@ -148,6 +175,16 @@ class PageHomeState extends State<PageHome> {
               ),
             ),
           ),
+          const SizedBox(height: 10),
+
+          //resetar o jogo
+          ElevatedButton(
+            onPressed: _resetGame,
+            child: const Text('Reset Game'),
+          ),
+          const SizedBox(height: 10),
+
+          //pontuação
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -168,4 +205,3 @@ class PageHomeState extends State<PageHome> {
     );
   }
 }
-//
